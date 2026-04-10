@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { setToken } from "@/lib/auth";
+import { setSessionMode, setToken } from "@/lib/auth";
 import type { AuthToken } from "@/lib/types";
 import Toast from "@/components/Toast";
 
@@ -24,6 +24,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password })
       });
       setToken(res.access_token);
+      setSessionMode("account");
       router.replace("/documents");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -39,6 +40,10 @@ export default function LoginPage() {
   return (
     <div className="max-w-md space-y-4">
       <h1 className="text-xl font-semibold">Login</h1>
+      <p className="text-sm text-zinc-500">
+        Guest sessions start automatically when you open chat or upload. Log in only if you want a
+        persistent account.
+      </p>
 
       <form onSubmit={submit} className="bg-white border rounded-xl p-4 space-y-3">
         <div className="space-y-1">

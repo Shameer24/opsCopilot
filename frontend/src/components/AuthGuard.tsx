@@ -1,25 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { isAuthed } from "@/lib/auth";
+import { ensureSession } from "@/lib/auth";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [ok, setOk] = useState(false);
+  const [status, setStatus] = useState<"checking" | "ready" | "error">("checking");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAuthed()) {
-      router.replace("/login");
-      return;
-    }
-    setOk(true);
-  }, [router]);
+    let cancelled = false;
 
-  if (!ok) {
+    async function init() {
+      try {
+        await ensureSession();
+        if (!cancelled) setStatus("ready");
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unable to start session");
+          setStatus("error");
+        }
+      }
+    }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (status === "checking") {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-sm text-zinc-600">
-        Checking session...
+        Starting session...
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-sm text-red-600">
+        {error || "Unable to start session."}
       </div>
     );
   }

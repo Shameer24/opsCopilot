@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearToken, isAuthed } from "@/lib/auth";
+import { clearToken, getSessionMode, isAuthed, isGuestSession } from "@/lib/auth";
 
 function NavItem({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
@@ -21,6 +21,8 @@ function NavItem({ href, label }: { href: string; label: string }) {
 export default function Navbar() {
   const router = useRouter();
   const authed = isAuthed();
+  const sessionMode = getSessionMode();
+  const guest = isGuestSession();
 
   return (
     <header className="border-b bg-white">
@@ -34,14 +36,22 @@ export default function Navbar() {
             <NavItem href="/documents" label="Documents" />
             <NavItem href="/upload" label="Upload" />
             <NavItem href="/chat" label="Chat" />
+            {guest ? (
+              <Link
+                href="/register"
+                className="text-sm px-3 py-2 rounded-lg bg-zinc-900 text-white"
+              >
+                Save account
+              </Link>
+            ) : null}
             <button
               onClick={() => {
                 clearToken();
-                router.replace("/login");
+                router.replace("/");
               }}
               className="text-sm px-3 py-2 rounded-lg text-zinc-700 hover:bg-zinc-200"
             >
-              Logout
+              {sessionMode === "guest" ? "Reset guest" : "Logout"}
             </button>
           </nav>
         ) : (

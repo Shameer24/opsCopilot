@@ -3,15 +3,14 @@ import uuid
 import logging
 from fastapi import APIRouter, Depends, UploadFile, File, BackgroundTasks, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import select, delete
+from sqlalchemy import select
 
 from app.api.deps import get_db, get_current_user
 from app.core.config import settings
-from app.core.errors import bad_request, not_found
+from app.core.errors import bad_request
 from app.core.rate_limit import rate_limit
 from app.models.user import User
 from app.models.document import Document
-from app.models.chunk import Chunk
 from app.schemas.documents import UploadResponse, DocumentOut
 from app.services.storage import storage
 from app.utils.hashing import sha256_bytes
@@ -23,19 +22,11 @@ logger = logging.getLogger("opscopilot.documents")
 
 @router.get("", response_model=list[DocumentOut])
 def list_documents(
-    skip: int = 0,
-    limit: int = 50,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    limit = min(max(limit, 1), 100)
-    skip = max(skip, 0)
     docs = db.execute(
-        select(Document)
-        .where(Document.user_id == user.id)
-        .order_by(Document.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+        select(Document).where(Document.user_id == user.id).order_by(Document.created_at.desc())
     ).scalars().all()
 
     return [
@@ -44,8 +35,6 @@ def list_documents(
             filename=d.filename,
             content_type=d.content_type,
             status=d.status,
-            file_size_bytes=d.file_size_bytes,
-            page_count=d.page_count,
             created_at=d.created_at.isoformat() if hasattr(d.created_at, "isoformat") else str(d.created_at),
         )
         for d in docs
@@ -74,6 +63,7 @@ async def upload_document(
 
     content_type = file.content_type or "application/octet-stream"
     if content_type not in ["application/pdf", "text/plain", "application/octet-stream"]:
+        # keep it permissive for logs; you can tighten later
         logger.info("upload_unusual_content_type", extra={"extra": {"ct": content_type}})
 
     digest = sha256_bytes(data)
@@ -100,26 +90,4 @@ async def upload_document(
     # async ingestion
     background.add_task(ingest_document_task, doc_id)
 
-    logger.info("document_uploaded", extra={"extra": {"doc_id": str(doc_id), "filename": safe_name}})
     return UploadResponse(document_id=doc_id, status="UPLOADED")
-
-
-@router.delete("/{document_id}", status_code=204)
-def delete_document(
-    document_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    doc = db.get(Document, document_id)
-    if doc is None or doc.user_id != user.id:
-        raise not_found("Document not found")
-
-    # Delete associated chunks first (FK cascade not assumed)
-    db.execute(delete(Chunk).where(Chunk.document_id == document_id))
-
-    # Remove file from disk (best-effort)
-    storage.delete_file(doc.storage_path)
-
-    db.delete(doc)
-    db.commit()
-    logger.info("document_deleted", extra={"extra": {"doc_id": str(document_id)}})

@@ -7,8 +7,6 @@ class DocumentOut(BaseModel):
     filename: str
     content_type: str
     status: str
-    file_size_bytes: int
-    page_count: int | None = None
     created_at: str
 
 

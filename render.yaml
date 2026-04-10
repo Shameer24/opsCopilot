@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: opscopilot-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # set in Render dashboard — use your Supabase URL
+      - key: JWT_SECRET
+        generateValue: true  # Render auto-generates a secure random value
+      - key: OPENAI_API_KEY
+        sync: false          # set in Render dashboard
+      - key: UPLOAD_DIR
+        value: /data/uploads
+      - key: CORS_ORIGINS
+        sync: false          # set to your Vercel frontend URL, e.g. https://opscopilot.vercel.app
+      - key: LLM_PROVIDER
+        value: openai
+      - key: EMBEDDINGS_PROVIDER
+        value: local
+      - key: ENV
+        value: production
+    disk:
+      name: uploads
+      mountPath: /data/uploads
+      sizeGB: 1

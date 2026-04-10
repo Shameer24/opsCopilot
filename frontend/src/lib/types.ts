@@ -8,8 +8,6 @@ export type DocumentOut = {
   filename: string;
   content_type: string;
   status: string;
-  file_size_bytes: number;
-  page_count?: number | null;
   created_at: string;
 };
 

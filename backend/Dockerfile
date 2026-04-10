@@ -31,5 +31,8 @@ RUN mkdir -p /data/uploads
 
 EXPOSE 8000
 
+# PORT is set by Render (and other PaaS); falls back to 8000 for local/compose
+ENV PORT=8000
+
 # Run migrations then start API
-CMD ["bash", "-lc", "alembic -c /app/alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["bash", "-lc", "alembic -c /app/alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

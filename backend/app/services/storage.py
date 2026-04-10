@@ -21,21 +21,5 @@ class LocalStorage:
     def open_bytes(self, absolute_path: str) -> bytes:
         return Path(absolute_path).read_bytes()
 
-    def delete_file(self, absolute_path: str) -> None:
-        """Remove file and clean up empty parent directories."""
-        p = Path(absolute_path)
-        try:
-            p.unlink(missing_ok=True)
-            # Remove empty parent dirs up to but not including base
-            parent = p.parent
-            while parent != self.base and parent.is_dir():
-                try:
-                    parent.rmdir()
-                    parent = parent.parent
-                except OSError:
-                    break
-        except Exception:
-            pass
-
 
 storage = LocalStorage(settings.UPLOAD_DIR)
